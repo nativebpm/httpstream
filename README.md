@@ -27,6 +27,16 @@ Ideal for large JSON bodies, multipart uploads, generated archives, or continuou
 Data is transmitted as it’s produced — the server can start processing immediately,  
 without waiting for the full body to be buffered.
 
+```mermaid
+flowchart TB
+    subgraph P["io.Pipe()"]
+        PW["PipeWriter"] --> PR["PipeReader"]
+    end
+
+    W["Writer (goroutine)"] -->|"writes into"| P
+    P -->|"provides data to"| R["Reader"]
+```
+
 ## Why Streaming Matters
 
 Traditional HTTP clients buffer request bodies entirely before sending.  
@@ -43,6 +53,7 @@ For large or dynamically generated payloads, this leads to:
 - [Streaming multipart upload](examples/multipart_streaming_example)
 - [Without fluent API (for comparison)](examples/multipart_streaming_example/multipart_streaming_without_fluent_api)
 - [Logger middleware](examples/logger_slog_example)
+- [Gotenbergo Client: Built on httpstream for efficient multipart uploads](https://github.com/nativebpm/gotenberg)
 
 ## License
 
