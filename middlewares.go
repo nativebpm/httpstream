@@ -1,10 +1,10 @@
-package streamhttp
+package httpstream
 
 import (
 	"log/slog"
 	"net/http"
 
-	"github.com/nativebpm/streamhttp/internal/httptransport"
+	"github.com/nativebpm/httpstream/internal/httptransport"
 )
 
 func LoggingMiddleware(logger *slog.Logger) func(http.RoundTripper) http.RoundTripper {

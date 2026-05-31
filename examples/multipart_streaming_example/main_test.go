@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nativebpm/streamhttp"
+	"github.com/nativebpm/httpstream"
 )
 
 // BenchmarkStreamingUpload benchmarks the streaming version
@@ -36,11 +36,11 @@ func BenchmarkStreamingUpload(b *testing.B) {
 	defer server2.Close()
 
 	client := &http.Client{Timeout: 30 * time.Second}
-	client1, err := streamhttp.NewClient(*client, server1.URL)
+	client1, err := httpstream.NewClient(client, server1.URL)
 	if err != nil {
 		b.Fatal(err)
 	}
-	client2, err := streamhttp.NewClient(*client, server2.URL)
+	client2, err := httpstream.NewClient(client, server2.URL)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -97,11 +97,11 @@ func BenchmarkBufferedUpload(b *testing.B) {
 	defer server2.Close()
 
 	client := &http.Client{Timeout: 30 * time.Second}
-	client1, err := streamhttp.NewClient(*client, server1.URL)
+	client1, err := httpstream.NewClient(client, server1.URL)
 	if err != nil {
 		b.Fatal(err)
 	}
-	client2, err := streamhttp.NewClient(*client, server2.URL)
+	client2, err := httpstream.NewClient(client, server2.URL)
 	if err != nil {
 		b.Fatal(err)
 	}

@@ -35,6 +35,14 @@ func NewMultipart(ctx context.Context, client http.Client, method, url string) *
 	}
 }
 
+func (r *Multipart) Use(middleware func(http.RoundTripper) http.RoundTripper) *Multipart {
+	if r.client.Transport == nil {
+		r.client.Transport = http.DefaultTransport
+	}
+	r.client.Transport = middleware(r.client.Transport)
+	return r
+}
+
 // Timeout sets a timeout for the request.
 func (r *Multipart) Timeout(duration time.Duration) *Multipart {
 	ctx, cancel := context.WithTimeout(r.request.Context(), duration)

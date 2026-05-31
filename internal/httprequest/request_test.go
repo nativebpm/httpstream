@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nativebpm/streamhttp/internal/httprequest"
+	"github.com/nativebpm/httpstream/internal/httprequest"
 )
 
 func TestNewRequest(t *testing.T) {

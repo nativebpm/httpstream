@@ -1,38 +1,42 @@
-# Stream-first HTTP client for Go
+# httpstream — Stream-first HTTP client for Go
 
-A minimal, middleware-friendly HTTP client that streams data directly via `io.Pipe`, avoiding full in-memory buffering.
+Efficient, zero-buffer streaming for large HTTP payloads — built on top of `net/http`.
 
 ```bash
-go get github.com/nativebpm/streamhttp
+go get github.com/nativebpm/httpstream
 ```
 
-## Why
+## Overview
 
-The standard `net/http` helpers buffer full payloads before sending. This becomes inefficient when working with:
+`httpstream` provides a minimal, streaming-oriented API for building HTTP requests without buffering entire payloads in memory.  
+Ideal for large JSON bodies, multipart uploads, generated archives, or continuous data feeds.
 
-- Large JSON or file uploads
-- Generated archives or database exports
-- Streaming pipelines and data transformations
+### Key Features
 
-## Problems
+- Stream data directly via `io.Pipe` — no intermediate buffers
+- Constant memory usage (`O(1)`), regardless of payload size
+- Natural backpressure (writes block when receiver is slow)
+- Thin `net/http` wrapper — fully compatible
+- Middleware support: `func(http.RoundTripper) http.RoundTripper`
+- Fluent API for readability (`GET`, `POST`, `Multipart`, etc.)
+- No goroutine leaks, no globals
 
-- **High memory usage** - O(n), proportional to payload size
-- **Transmission delay** - server waits for full upload
-- **OOM risk** - on constrained environments
+## How It Works
 
-## Stream-first solution
+`httpstream` connects your writer directly to the HTTP transport.  
+Data is transmitted as it’s produced — the server can start processing immediately,  
+without waiting for the full body to be buffered.
 
-- `io.Pipe` connects your writer directly to the HTTP transport
-- **Constant memory** - O(1), independent of payload size
-- **Natural backpressure** - writer blocks until data is consumed by the transport
-- **Immediate server processing** - no full buffering required
+## Why Streaming Matters
 
-## Highlights
+Traditional HTTP clients buffer request bodies entirely before sending.  
+For large or dynamically generated payloads, this leads to:
 
-- Thin wrapper over `net/http`
-- Composable middleware: `func(http.RoundTripper) http.RoundTripper`
-- Fluent API: `GET`, `POST`, `Multipart`, etc.
-- Safe for concurrent use - no globals, no internal state, no reflection
+- High memory usage (`O(n)` where n = payload size)
+- Slow transmission start (server waits for full upload)
+- Out-of-memory errors in constrained environments
+
+`httpstream` eliminates these issues by design.
 
 ## Examples
 
@@ -42,4 +46,4 @@ The standard `net/http` helpers buffer full payloads before sending. This become
 
 ## License
 
-MIT - see [LICENSE](../LICENSE)
+MIT — see [`LICENSE`](../LICENSE).

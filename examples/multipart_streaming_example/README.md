@@ -1,6 +1,6 @@
 # Multipart Streaming Example
 
-This example demonstrates streaming data between two servers using streamhttp.
+This example demonstrates streaming data between two servers using httpstream.
 
 ## Architecture
 

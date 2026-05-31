@@ -1,4 +1,4 @@
-package streamhttp
+package httpstream
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func TestNewClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := http.Client{}
+			client := &http.Client{}
 			_, err := NewClient(client, tt.baseURL)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewClient() error = %v, wantErr %v", err, tt.wantErr)
@@ -42,7 +42,7 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestClient_url(t *testing.T) {
-	client := http.Client{}
+	client := &http.Client{}
 	hc, _ := NewClient(client, "https://example.com/api")
 
 	tests := []struct {
@@ -78,7 +78,7 @@ func TestClient_url(t *testing.T) {
 }
 
 func TestClient_NewRequest(t *testing.T) {
-	client := http.Client{}
+	client := &http.Client{}
 	hc, _ := NewClient(client, "https://example.com")
 
 	ctx := context.Background()
@@ -95,7 +95,7 @@ func TestClient_NewRequest(t *testing.T) {
 }
 
 func TestClient_NewMultipart(t *testing.T) {
-	client := http.Client{}
+	client := &http.Client{}
 	hc, _ := NewClient(client, "https://example.com")
 
 	ctx := context.Background()
@@ -119,8 +119,9 @@ func TestClient_WithMiddleware(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := http.Client{}
-	hc, _ := NewClient(client, server.URL, func(rt http.RoundTripper) http.RoundTripper {
+	client := &http.Client{}
+	hc, _ := NewClient(client, server.URL)
+	hc.Use(func(rt http.RoundTripper) http.RoundTripper {
 		return &testTransport{rt: rt}
 	})
 

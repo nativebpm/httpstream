@@ -1,11 +1,11 @@
-package streamhttp
+package httpstream
 
 import (
 	"context"
 	"net/http"
 	"net/url"
 
-	"github.com/nativebpm/streamhttp/internal/httprequest"
+	"github.com/nativebpm/httpstream/internal/httprequest"
 )
 
 type HttpMethod string
@@ -30,27 +30,24 @@ type Client struct {
 	BaseURL    url.URL
 }
 
-func NewClient(client http.Client, baseURL string,
-	middlewares ...func(http.RoundTripper) http.RoundTripper) (*Client, error) {
+func NewClient(client *http.Client, baseURL string) (*Client, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, err
 	}
-
-	t := client.Transport
-	if t == nil {
-		t = http.DefaultTransport
-	}
-	for _, mw := range middlewares {
-		t = mw(t)
-	}
-	client.Transport = t
-
-	return &Client{HttpClient: client, BaseURL: *u}, nil
+	return &Client{HttpClient: *client, BaseURL: *u}, nil
 }
 
 func (c *Client) url(path string) string {
 	return c.BaseURL.JoinPath(path).String()
+}
+
+func (c *Client) Use(middleware func(http.RoundTripper) http.RoundTripper) *Client {
+	if c.HttpClient.Transport == nil {
+		c.HttpClient.Transport = http.DefaultTransport
+	}
+	c.HttpClient.Transport = middleware(c.HttpClient.Transport)
+	return c
 }
 
 func (c *Client) Request(ctx context.Context, method HttpMethod, path string) *httprequest.Request {

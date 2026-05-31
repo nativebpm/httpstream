@@ -35,6 +35,14 @@ func NewRequest(ctx context.Context, client http.Client, method string, url stri
 	}
 }
 
+func (r *Request) Use(middleware func(http.RoundTripper) http.RoundTripper) *Request {
+	if r.client.Transport == nil {
+		r.client.Transport = http.DefaultTransport
+	}
+	r.client.Transport = middleware(r.client.Transport)
+	return r
+}
+
 // Timeout sets a timeout for the request.
 func (r *Request) Timeout(duration time.Duration) *Request {
 	ctx, cancel := context.WithTimeout(r.Context(), duration)
