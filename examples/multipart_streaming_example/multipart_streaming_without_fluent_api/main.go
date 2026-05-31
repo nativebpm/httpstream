@@ -12,7 +12,7 @@ import (
 	"time"
 
 	// "github.com/nativebpm/httpstream/examples/multipart_streaming_example/middleware"
-	"github.com/nativebpm/httpstream/internal/httptransport"
+	"github.com/nativebpm/httpstream"
 )
 
 // countingReader wraps an io.Reader and tracks the number of bytes read
@@ -41,20 +41,20 @@ func main() {
 	runtime.ReadMemStats(&m)
 	logger.Info("Before streaming", "Alloc (KB)", m.Alloc/1024, "TotalAlloc (KB)", m.TotalAlloc/1024)
 
-	httpstream := &http.Client{Timeout: 60 * time.Second}
+	httpClient := &http.Client{Timeout: 60 * time.Second}
 
-	server1Client := *httpstream
-	server2Client := *httpstream
+	server1Client := *httpClient
+	server2Client := *httpClient
 
 	// Attach logging + progress middleware to server1 (for download progress).
 	transport1 := http.DefaultTransport
-	transport1 = httptransport.LoggingMiddleware(logger.WithGroup("server1"))(transport1)
+	transport1 = httpstream.LoggingMiddleware(logger.WithGroup("server1"))(transport1)
 	// transport1 = middleware.ProgressMiddleware(logger.WithGroup("server1"))(transport1)
 	server1Client.Transport = transport1
 
 	// Attach logging + upload-progress middleware to server2 (for upload progress).
 	transport2 := http.DefaultTransport
-	transport2 = httptransport.LoggingMiddleware(logger.WithGroup("server2"))(transport2)
+	transport2 = httpstream.LoggingMiddleware(logger.WithGroup("server2"))(transport2)
 	// transport2 = middleware.UploadProgressMiddleware(logger.WithGroup("server2"))(transport2)
 	server2Client.Transport = transport2
 

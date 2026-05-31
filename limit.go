@@ -1,4 +1,4 @@
-package httptransport
+package httpstream
 
 import (
 	"net/http"

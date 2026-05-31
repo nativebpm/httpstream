@@ -41,6 +41,16 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
+func TestNewClient_NilClient(t *testing.T) {
+	client, err := NewClient(nil, "https://example.com")
+	if err != nil {
+		t.Fatalf("unexpected error with nil client: %v", err)
+	}
+	if client == nil {
+		t.Fatal("expected non-nil client")
+	}
+}
+
 func TestClient_url(t *testing.T) {
 	client := &http.Client{}
 	hc, _ := NewClient(client, "https://example.com/api")

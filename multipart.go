@@ -1,4 +1,4 @@
-package httprequest
+package httpstream
 
 import (
 	"context"
@@ -57,33 +57,30 @@ func (r *Multipart) Send() (*http.Response, error) {
 	ctx := r.request.Context()
 
 	// Pre-validate files to ensure they are not empty
-	for i, field := range r.fields {
-		if field.contentType == applicationOctetStream {
-			// Read first byte to check if file has content
+	for i, f := range r.fields {
+		if f.contentType == applicationOctetStream {
 			buf := make([]byte, 1)
-			n, err := field.file.Read(buf)
+			n, err := f.file.Read(buf)
 			if err != nil && err != io.EOF {
-				return nil, fmt.Errorf("failed to read file %s: %w", field.value, err)
+				return nil, fmt.Errorf("failed to read file %s: %w", f.value, err)
 			}
 			if n == 0 {
-				return nil, fmt.Errorf("empty file: %s", field.value)
+				return nil, fmt.Errorf("empty file: %s", f.value)
 			}
-			// Wrap reader to return the read byte back to the stream
-			r.fields[i].file = io.MultiReader(strings.NewReader(string(buf[:n])), field.file)
+			r.fields[i].file = io.MultiReader(strings.NewReader(string(buf[:n])), f.file)
 		}
 	}
 
 	pr, pw := io.Pipe()
 	mw := multipart.NewWriter(pw)
 	r.request.Body = pr
-
 	r.request.Header.Set("Content-Type", mw.FormDataContentType())
 
 	go func() {
 		defer pw.Close()
 		defer mw.Close()
 
-		for _, field := range r.fields {
+		for _, f := range r.fields {
 			select {
 			case <-ctx.Done():
 				pw.CloseWithError(ctx.Err())
@@ -91,24 +88,18 @@ func (r *Multipart) Send() (*http.Response, error) {
 			default:
 			}
 
-			switch field.contentType {
-			case multipartFormData:
-				if err := mw.WriteField(field.key, field.value); err != nil {
-					pw.CloseWithError(err)
-					return
+			var err error
+			if f.contentType == multipartFormData {
+				err = mw.WriteField(f.key, f.value)
+			} else if f.contentType == applicationOctetStream {
+				var part io.Writer
+				if part, err = mw.CreateFormFile(f.key, f.value); err == nil {
+					_, err = io.Copy(part, f.file)
 				}
-
-			case applicationOctetStream:
-				part, err := mw.CreateFormFile(field.key, field.value)
-				if err != nil {
-					pw.CloseWithError(err)
-					return
-				}
-
-				if _, err := io.Copy(part, field.file); err != nil {
-					pw.CloseWithError(err)
-					return
-				}
+			}
+			if err != nil {
+				pw.CloseWithError(err)
+				return
 			}
 		}
 	}()
@@ -132,55 +123,25 @@ func (r *Multipart) sendRequest() (*http.Response, error) {
 }
 
 // Header sets an HTTP header on the request.
-func (r *Multipart) Header(key, value string) *Multipart {
-	r.request.Header.Set(key, value)
-	return r
-}
+func (r *Multipart) Header(k, v string) *Multipart { r.request.Header.Set(k, v); return r }
 
 // PathParam replaces a path variable placeholder in the URL.
-// Replaces {key} with the provided value.
-// Example: "/users/{id}" with PathParam("id", "123") becomes "/users/123"
-func (r *Multipart) PathParam(key, value string) *Multipart {
-	placeholder := "{" + key + "}"
-	r.request.URL.Path = strings.ReplaceAll(r.request.URL.Path, placeholder, value)
+func (r *Multipart) PathParam(key, val string) *Multipart {
+	r.request.URL.Path = strings.ReplaceAll(r.request.URL.Path, "{"+key+"}", val)
 	return r
 }
-
-// PathInt replaces a path variable placeholder with an integer value.
-func (r *Multipart) PathInt(key string, value int) *Multipart {
-	return r.PathParam(key, strconv.Itoa(value))
-}
-
-// PathBool replaces a path variable placeholder with a boolean value.
-func (r *Multipart) PathBool(key string, value bool) *Multipart {
-	return r.PathParam(key, strconv.FormatBool(value))
-}
-
-// PathFloat replaces a path variable placeholder with a float64 value.
-func (r *Multipart) PathFloat(key string, value float64) *Multipart {
-	return r.PathParam(key, strconv.FormatFloat(value, 'f', -1, 64))
-}
+func (r *Multipart) PathInt(k string, v int) *Multipart     { return r.PathParam(k, strconv.Itoa(v)) }
+func (r *Multipart) PathBool(k string, v bool) *Multipart   { return r.PathParam(k, strconv.FormatBool(v)) }
+func (r *Multipart) PathFloat(k string, v float64) *Multipart { return r.PathParam(k, strconv.FormatFloat(v, 'f', -1, 64)) }
 
 // Param adds a string field to the multipart form.
-func (r *Multipart) Param(key, value string) *Multipart {
-	r.fields = append(r.fields, multipartField{contentType: multipartFormData, key: key, value: value})
+func (r *Multipart) Param(k, v string) *Multipart {
+	r.fields = append(r.fields, multipartField{contentType: multipartFormData, key: k, value: v})
 	return r
 }
-
-// Bool adds a boolean field to the multipart form.
-func (r *Multipart) Bool(key string, value bool) *Multipart {
-	return r.Param(key, strconv.FormatBool(value))
-}
-
-// Float adds a float64 field to the multipart form.
-func (r *Multipart) Float(key string, value float64) *Multipart {
-	return r.Param(key, strconv.FormatFloat(value, 'f', -1, 64))
-}
-
-// Int adds an integer field to the multipart form.
-func (r *Multipart) Int(key string, value int) *Multipart {
-	return r.Param(key, strconv.Itoa(value))
-}
+func (r *Multipart) Int(k string, v int) *Multipart     { return r.Param(k, strconv.Itoa(v)) }
+func (r *Multipart) Bool(k string, v bool) *Multipart   { return r.Param(k, strconv.FormatBool(v)) }
+func (r *Multipart) Float(k string, v float64) *Multipart { return r.Param(k, strconv.FormatFloat(v, 'f', -1, 64)) }
 
 // File adds a file field to the multipart form.
 func (r *Multipart) File(key, filename string, content io.Reader) *Multipart {

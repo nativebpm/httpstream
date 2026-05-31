@@ -1,4 +1,4 @@
-package httprequest
+package httpstream
 
 import (
 	"context"
@@ -103,34 +103,16 @@ func (r *Request) sendRequest() (*http.Response, error) {
 }
 
 // Header sets an HTTP header on the request.
-func (r *Request) Header(key, value string) *Request {
-	r.Request.Header.Set(key, value)
-	return r
-}
+func (r *Request) Header(k, v string) *Request { r.Request.Header.Set(k, v); return r }
 
 // PathParam replaces a path variable placeholder in the URL.
-// Replaces {key} with the provided value.
-// Example: "/users/{id}" with PathParam("id", "123") becomes "/users/123"
-func (r *Request) PathParam(key, value string) *Request {
-	placeholder := "{" + key + "}"
-	r.Request.URL.Path = strings.ReplaceAll(r.Request.URL.Path, placeholder, value)
+func (r *Request) PathParam(key, val string) *Request {
+	r.Request.URL.Path = strings.ReplaceAll(r.Request.URL.Path, "{"+key+"}", val)
 	return r
 }
-
-// PathInt replaces a path variable placeholder with an integer value.
-func (r *Request) PathInt(key string, value int) *Request {
-	return r.PathParam(key, strconv.Itoa(value))
-}
-
-// PathBool replaces a path variable placeholder with a boolean value.
-func (r *Request) PathBool(key string, value bool) *Request {
-	return r.PathParam(key, strconv.FormatBool(value))
-}
-
-// PathFloat replaces a path variable placeholder with a float64 value.
-func (r *Request) PathFloat(key string, value float64) *Request {
-	return r.PathParam(key, strconv.FormatFloat(value, 'f', -1, 64))
-}
+func (r *Request) PathInt(k string, v int) *Request     { return r.PathParam(k, strconv.Itoa(v)) }
+func (r *Request) PathBool(k string, v bool) *Request   { return r.PathParam(k, strconv.FormatBool(v)) }
+func (r *Request) PathFloat(k string, v float64) *Request { return r.PathParam(k, strconv.FormatFloat(v, 'f', -1, 64)) }
 
 // Param adds a query parameter to the request.
 func (r *Request) Param(key, value string) *Request {
@@ -139,21 +121,9 @@ func (r *Request) Param(key, value string) *Request {
 	r.Request.URL.RawQuery = q.Encode()
 	return r
 }
-
-// Bool adds a boolean query parameter to the request.
-func (r *Request) Bool(key string, value bool) *Request {
-	return r.Param(key, strconv.FormatBool(value))
-}
-
-// Float adds a float64 query parameter to the request.
-func (r *Request) Float(key string, value float64) *Request {
-	return r.Param(key, strconv.FormatFloat(value, 'f', -1, 64))
-}
-
-// Int adds an integer query parameter to the request.
-func (r *Request) Int(key string, value int) *Request {
-	return r.Param(key, strconv.Itoa(value))
-}
+func (r *Request) Int(k string, v int) *Request     { return r.Param(k, strconv.Itoa(v)) }
+func (r *Request) Bool(k string, v bool) *Request   { return r.Param(k, strconv.FormatBool(v)) }
+func (r *Request) Float(k string, v float64) *Request { return r.Param(k, strconv.FormatFloat(v, 'f', -1, 64)) }
 
 // Body sets the request body and Content-Type header.
 func (r *Request) Body(body io.ReadCloser, contentType string) *Request {
@@ -182,7 +152,6 @@ func (r *Request) Form(key, value string) *Request {
 }
 
 // Cookie adds a cookie to the request.
-// Subsequent calls append additional cookies.
 func (r *Request) Cookie(name, value string) *Request {
 	r.Request.AddCookie(&http.Cookie{Name: name, Value: value})
 	return r

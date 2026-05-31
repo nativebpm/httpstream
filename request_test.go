@@ -1,4 +1,4 @@
-package httprequest_test
+package httpstream_test
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nativebpm/httpstream/internal/httprequest"
+	"github.com/nativebpm/httpstream"
 )
 
 func TestNewRequest(t *testing.T) {
@@ -20,7 +20,7 @@ func TestNewRequest(t *testing.T) {
 
 	url, _ := url.Parse("http://example.com/api")
 
-	req := httprequest.NewRequest(ctx, client, http.MethodGet, url.String())
+	req := httpstream.NewRequest(ctx, client, http.MethodGet, url.String())
 	if req == nil {
 		t.Fatal("NewRequest returned nil")
 	}
@@ -79,7 +79,7 @@ func TestRequest_PathParam(t *testing.T) {
 
 			url, _ := url.Parse(server.URL + tt.url)
 
-			req := httprequest.NewRequest(ctx, client, http.MethodGet, url.String())
+			req := httpstream.NewRequest(ctx, client, http.MethodGet, url.String())
 			for key, value := range tt.params {
 				req = req.PathParam(key, value)
 			}
@@ -110,7 +110,7 @@ func TestRequest_PathInt(t *testing.T) {
 
 	url, _ := url.Parse(server.URL + "/users/{id}/score/{score}")
 
-	resp, err := httprequest.NewRequest(ctx, client, http.MethodGet,
+	resp, err := httpstream.NewRequest(ctx, client, http.MethodGet,
 		url.String()).
 		PathInt("id", 123).
 		PathInt("score", 95).
@@ -159,7 +159,7 @@ func TestRequest_PathBool(t *testing.T) {
 
 			url, _ := url.Parse(server.URL + "/api/active/{status}")
 
-			resp, err := httprequest.NewRequest(ctx, client, http.MethodGet,
+			resp, err := httpstream.NewRequest(ctx, client, http.MethodGet,
 				url.String()).
 				PathBool("status", tt.value).
 				Send()
@@ -189,7 +189,7 @@ func TestRequest_PathFloat(t *testing.T) {
 
 	url, _ := url.Parse(server.URL + "/products/{price}")
 
-	resp, err := httprequest.NewRequest(ctx, client, http.MethodGet,
+	resp, err := httpstream.NewRequest(ctx, client, http.MethodGet,
 		url.String()).
 		PathFloat("price", 19.99).
 		Send()
@@ -220,7 +220,7 @@ func TestRequest_PathParamWithQueryParams(t *testing.T) {
 
 	url, _ := url.Parse(server.URL + "/users/{id}/posts")
 
-	resp, err := httprequest.NewRequest(ctx, client,
+	resp, err := httpstream.NewRequest(ctx, client,
 		http.MethodGet, url.String()).
 		PathParam("id", "123").
 		Param("page", "2").
@@ -257,7 +257,7 @@ func TestRequest_PathParamChaining(t *testing.T) {
 	url, _ := url.Parse(server.URL + "/api/{version}/users/{id}")
 
 	// Test that all methods return *Request for chaining
-	req := httprequest.NewRequest(ctx, client,
+	req := httpstream.NewRequest(ctx, client,
 		http.MethodGet, url.String()).
 		PathParam("version", "v1").
 		Header("X-Custom", "value").
@@ -289,7 +289,7 @@ func TestRequest_Param(t *testing.T) {
 
 	url, _ := url.Parse(server.URL + "/api")
 
-	resp, err := httprequest.NewRequest(ctx, client, http.MethodGet, url.String()).
+	resp, err := httpstream.NewRequest(ctx, client, http.MethodGet, url.String()).
 		Param("key1", "value1").
 		Param("key2", "value2").
 		Send()
@@ -310,33 +310,33 @@ func TestRequest_Param(t *testing.T) {
 func TestRequest_TypedParams(t *testing.T) {
 	tests := []struct {
 		name     string
-		setup    func(*httprequest.Request) *httprequest.Request
+		setup    func(*httpstream.Request) *httpstream.Request
 		expected map[string]string
 	}{
 		{
 			name: "bool_true",
-			setup: func(r *httprequest.Request) *httprequest.Request {
+			setup: func(r *httpstream.Request) *httpstream.Request {
 				return r.Bool("active", true)
 			},
 			expected: map[string]string{"active": "true"},
 		},
 		{
 			name: "bool_false",
-			setup: func(r *httprequest.Request) *httprequest.Request {
+			setup: func(r *httpstream.Request) *httpstream.Request {
 				return r.Bool("active", false)
 			},
 			expected: map[string]string{"active": "false"},
 		},
 		{
 			name: "int",
-			setup: func(r *httprequest.Request) *httprequest.Request {
+			setup: func(r *httpstream.Request) *httpstream.Request {
 				return r.Int("count", 42)
 			},
 			expected: map[string]string{"count": "42"},
 		},
 		{
 			name: "float",
-			setup: func(r *httprequest.Request) *httprequest.Request {
+			setup: func(r *httpstream.Request) *httpstream.Request {
 				return r.Float("price", 19.99)
 			},
 			expected: map[string]string{"price": "19.99"},
@@ -357,7 +357,7 @@ func TestRequest_TypedParams(t *testing.T) {
 
 			url, _ := url.Parse(server.URL + "/api")
 
-			req := httprequest.NewRequest(ctx, client, http.MethodGet, url.String())
+			req := httpstream.NewRequest(ctx, client, http.MethodGet, url.String())
 			resp, err := tt.setup(req).Send()
 
 			if err != nil {
@@ -388,7 +388,7 @@ func TestRequest_Header(t *testing.T) {
 
 	url, _ := url.Parse(server.URL)
 
-	resp, err := httprequest.NewRequest(ctx, client, http.MethodGet, url.String()).
+	resp, err := httpstream.NewRequest(ctx, client, http.MethodGet, url.String()).
 		Header("X-API-Key", "secret-token-123").
 		Send()
 
@@ -431,7 +431,7 @@ func TestRequest_JSON(t *testing.T) {
 	url, _ := url.Parse(server.URL + "/api/users")
 
 	user := User{Name: "John Doe", Email: "john@example.com"}
-	resp, err := httprequest.NewRequest(ctx, client, http.MethodPost, url.String()).
+	resp, err := httpstream.NewRequest(ctx, client, http.MethodPost, url.String()).
 		JSON(user).
 		Send()
 
@@ -474,7 +474,7 @@ func TestRequest_Body(t *testing.T) {
 	url, _ := url.Parse(server.URL)
 
 	bodyContent := "custom body content"
-	resp, err := httprequest.NewRequest(ctx, client, http.MethodPost, url.String()).
+	resp, err := httpstream.NewRequest(ctx, client, http.MethodPost, url.String()).
 		Body(io.NopCloser(strings.NewReader(bodyContent)), "text/plain").
 		Send()
 
@@ -509,7 +509,7 @@ func TestRequest_ContextCancellation(t *testing.T) {
 
 	url, _ := url.Parse(server.URL)
 
-	_, err := httprequest.NewRequest(ctx, client, http.MethodGet, url.String()).Send()
+	_, err := httpstream.NewRequest(ctx, client, http.MethodGet, url.String()).Send()
 
 	if err == nil {
 		t.Fatal("expected context cancellation error, got nil")
@@ -534,7 +534,7 @@ func TestRequest_Timeout(t *testing.T) {
 
 	// Test 1: Request should timeout
 	ctx := context.Background()
-	_, err := httprequest.NewRequest(ctx, client, http.MethodGet, url.String()).
+	_, err := httpstream.NewRequest(ctx, client, http.MethodGet, url.String()).
 		Timeout(50 * time.Millisecond).
 		Send()
 
@@ -548,7 +548,7 @@ func TestRequest_Timeout(t *testing.T) {
 	url, _ = url.Parse(server.URL)
 
 	// Test 2: Request should succeed with longer timeout
-	resp, err := httprequest.NewRequest(ctx, client, http.MethodGet, url.String()).
+	resp, err := httpstream.NewRequest(ctx, client, http.MethodGet, url.String()).
 		Timeout(500 * time.Millisecond).
 		Send()
 
@@ -578,7 +578,7 @@ func TestRequest_JSONWithTimeout(t *testing.T) {
 	url, _ := url.Parse(server.URL)
 
 	data := map[string]string{"key": "value"}
-	_, err := httprequest.NewRequest(ctx, client, http.MethodPost, url.String()).
+	_, err := httpstream.NewRequest(ctx, client, http.MethodPost, url.String()).
 		JSON(data).
 		Timeout(50 * time.Millisecond).
 		Send()
@@ -625,7 +625,7 @@ func TestRequest_ComplexChaining(t *testing.T) {
 	url, _ := url.Parse(server.URL + "/api/{version}/products/{id}")
 
 	data := RequestData{Name: "Product", Price: 99.99, Active: true}
-	resp, err := httprequest.NewRequest(ctx, client, http.MethodPost, url.String()).
+	resp, err := httpstream.NewRequest(ctx, client, http.MethodPost, url.String()).
 		PathParam("version", "v1").
 		PathInt("id", 123).
 		Header("Authorization", "Bearer token123").

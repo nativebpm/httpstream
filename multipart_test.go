@@ -1,4 +1,4 @@
-package httprequest_test
+package httpstream_test
 
 import (
 	"bytes"
@@ -12,14 +12,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nativebpm/httpstream/internal/httprequest"
+	"github.com/nativebpm/httpstream"
 )
 
 func TestNewMultipart(t *testing.T) {
 	client := http.Client{}
 	ctx := context.Background()
 
-	mp := httprequest.NewMultipart(ctx, client, http.MethodPost, "http://example.com/upload")
+	mp := httpstream.NewMultipart(ctx, client, http.MethodPost, "http://example.com/upload")
 	if mp == nil {
 		t.Fatal("NewMultipart returned nil")
 	}
@@ -69,7 +69,7 @@ func TestMultipart_Param(t *testing.T) {
 	client := http.Client{}
 	ctx := context.Background()
 
-	resp, err := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL).
+	resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL).
 		Param("name", "John Doe").
 		Param("email", "john@example.com").
 		Send()
@@ -94,33 +94,33 @@ func TestMultipart_Param(t *testing.T) {
 func TestMultipart_TypedFields(t *testing.T) {
 	tests := []struct {
 		name     string
-		setup    func(*httprequest.Multipart) *httprequest.Multipart
+		setup    func(*httpstream.Multipart) *httpstream.Multipart
 		expected map[string]string
 	}{
 		{
 			name: "bool_true",
-			setup: func(mp *httprequest.Multipart) *httprequest.Multipart {
+			setup: func(mp *httpstream.Multipart) *httpstream.Multipart {
 				return mp.Bool("active", true)
 			},
 			expected: map[string]string{"active": "true"},
 		},
 		{
 			name: "bool_false",
-			setup: func(mp *httprequest.Multipart) *httprequest.Multipart {
+			setup: func(mp *httpstream.Multipart) *httpstream.Multipart {
 				return mp.Bool("active", false)
 			},
 			expected: map[string]string{"active": "false"},
 		},
 		{
 			name: "float",
-			setup: func(mp *httprequest.Multipart) *httprequest.Multipart {
+			setup: func(mp *httpstream.Multipart) *httpstream.Multipart {
 				return mp.Float("price", 19.99)
 			},
 			expected: map[string]string{"price": "19.99"},
 		},
 		{
 			name: "int",
-			setup: func(mp *httprequest.Multipart) *httprequest.Multipart {
+			setup: func(mp *httpstream.Multipart) *httpstream.Multipart {
 				return mp.Int("count", 42)
 			},
 			expected: map[string]string{"count": "42"},
@@ -168,7 +168,7 @@ func TestMultipart_TypedFields(t *testing.T) {
 			client := http.Client{}
 			ctx := context.Background()
 
-			mp := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL)
+			mp := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL)
 			resp, err := tt.setup(mp).Send()
 
 			if err != nil {
@@ -230,7 +230,7 @@ func TestMultipart_File(t *testing.T) {
 	ctx := context.Background()
 
 	fileContent := []byte("Hello, World!")
-	resp, err := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL).
+	resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL).
 		File("document", "test.txt", bytes.NewReader(fileContent)).
 		Send()
 
@@ -296,7 +296,7 @@ func TestMultipart_MixedParamsAndFiles(t *testing.T) {
 	ctx := context.Background()
 
 	fileContent := []byte("PDF content here")
-	resp, err := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL).
+	resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL).
 		Param("title", "My Document").
 		Int("version", 2).
 		Bool("published", true).
@@ -342,7 +342,7 @@ func TestMultipart_Header(t *testing.T) {
 	client := http.Client{}
 	ctx := context.Background()
 
-	resp, err := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL).
+	resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL).
 		Header("X-API-Key", "secret-token-123").
 		Param("data", "value").
 		Send()
@@ -399,7 +399,7 @@ func TestMultipart_LargeFile(t *testing.T) {
 
 	// Create a 1MB file content
 	largeContent := bytes.Repeat([]byte("x"), 1024*1024)
-	resp, err := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL).
+	resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL).
 		File("largefile", "large.dat", bytes.NewReader(largeContent)).
 		Send()
 
@@ -432,7 +432,7 @@ func TestMultipart_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	_, err := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL).
+	_, err := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL).
 		Param("data", "value").
 		Send()
 
@@ -490,7 +490,7 @@ func TestMultipart_MultipleFiles(t *testing.T) {
 	file2 := []byte("content2")
 	file3 := []byte("content3")
 
-	resp, err := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL).
+	resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL).
 		File("file", "doc1.txt", bytes.NewReader(file1)).
 		File("file", "doc2.txt", bytes.NewReader(file2)).
 		File("attachment", "doc3.txt", bytes.NewReader(file3)).
@@ -550,7 +550,7 @@ func TestMultipart_EmptyForm(t *testing.T) {
 	client := http.Client{}
 	ctx := context.Background()
 
-	resp, err := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL).Send()
+	resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL).Send()
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -576,7 +576,7 @@ func TestMultipart_ChainedCalls(t *testing.T) {
 	ctx := context.Background()
 
 	// Test that all methods return *Multipart for chaining
-	mp := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL).
+	mp := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL).
 		Header("X-Custom", "value").
 		Param("key1", "value1").
 		Bool("flag", true).
@@ -608,7 +608,7 @@ func TestMultipart_Timeout(t *testing.T) {
 
 	// Test 1: Request should timeout
 	ctx := context.Background()
-	_, err := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL).
+	_, err := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL).
 		Param("field", "value").
 		Timeout(50 * time.Millisecond).
 		Send()
@@ -621,7 +621,7 @@ func TestMultipart_Timeout(t *testing.T) {
 	}
 
 	// Test 2: Request should succeed with longer timeout
-	resp, err := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL).
+	resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL).
 		Param("field", "value").
 		Timeout(500 * time.Millisecond).
 		Send()
@@ -647,7 +647,7 @@ func TestMultipart_TimeoutChaining(t *testing.T) {
 	ctx := context.Background()
 
 	// Test chaining Timeout with other methods
-	resp, err := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL).
+	resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL).
 		Timeout(5*time.Second).
 		Header("X-Test", "value").
 		Param("field", "value").
@@ -686,7 +686,7 @@ func TestMultipart_TimeoutWithLargeFile(t *testing.T) {
 
 	// Large file that should timeout during upload
 	largeContent := bytes.Repeat([]byte("x"), 1024*100) // 100KB
-	_, err := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL).
+	_, err := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL).
 		File("largefile", "large.dat", bytes.NewReader(largeContent)).
 		Timeout(50 * time.Millisecond).
 		Send()
@@ -738,7 +738,7 @@ func TestMultipart_PathParam(t *testing.T) {
 			client := http.Client{}
 			ctx := context.Background()
 
-			mp := httprequest.NewMultipart(ctx, client, http.MethodPost, server.URL+tt.url)
+			mp := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL+tt.url)
 			for key, value := range tt.params {
 				mp = mp.PathParam(key, value)
 			}
@@ -767,7 +767,7 @@ func TestMultipart_PathInt(t *testing.T) {
 	client := http.Client{}
 	ctx := context.Background()
 
-	resp, err := httprequest.NewMultipart(ctx, client, http.MethodPost,
+	resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost,
 		server.URL+"/users/{id}/files/{version}",
 	).
 		PathInt("id", 123).
@@ -816,7 +816,7 @@ func TestMultipart_PathBool(t *testing.T) {
 			client := http.Client{}
 			ctx := context.Background()
 
-			resp, err := httprequest.NewMultipart(ctx, client, http.MethodPost,
+			resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost,
 				server.URL+"/api/public/{visibility}/upload",
 			).
 				PathBool("visibility", tt.value).
@@ -846,7 +846,7 @@ func TestMultipart_PathFloat(t *testing.T) {
 	client := http.Client{}
 	ctx := context.Background()
 
-	resp, err := httprequest.NewMultipart(ctx, client, http.MethodPost,
+	resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost,
 		server.URL+"/products/{price}/image",
 	).
 		PathFloat("price", 99.95).
@@ -909,7 +909,7 @@ func TestMultipart_PathParamWithFile(t *testing.T) {
 	ctx := context.Background()
 
 	fileContent := []byte("document content")
-	resp, err := httprequest.NewMultipart(ctx, client, http.MethodPost,
+	resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost,
 		server.URL+"/users/{userId}/documents/{docType}",
 	).
 		PathParam("userId", "abc-123").
@@ -944,7 +944,7 @@ func TestMultipart_ComplexPathChaining(t *testing.T) {
 	client := http.Client{}
 	ctx := context.Background()
 
-	resp, err := httprequest.NewMultipart(ctx, client, http.MethodPost,
+	resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost,
 		server.URL+"/api/{version}/users/{id}/files/{fileId}",
 	).
 		PathParam("version", "v2").

@@ -1,4 +1,4 @@
-package httptransport
+package httpstream
 
 import (
 	"log/slog"

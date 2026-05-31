@@ -4,8 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/url"
-
-	"github.com/nativebpm/httpstream/internal/httprequest"
 )
 
 type HttpMethod string
@@ -22,9 +20,6 @@ const (
 	TRACE   HttpMethod = http.MethodTrace
 )
 
-type Multipart = httprequest.Multipart
-type Request = httprequest.Request
-
 type Client struct {
 	HttpClient http.Client
 	BaseURL    url.URL
@@ -35,7 +30,11 @@ func NewClient(client *http.Client, baseURL string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{HttpClient: *client, BaseURL: *u}, nil
+	c := http.Client{}
+	if client != nil {
+		c = *client
+	}
+	return &Client{HttpClient: c, BaseURL: *u}, nil
 }
 
 func (c *Client) url(path string) string {
@@ -50,34 +49,34 @@ func (c *Client) Use(middleware func(http.RoundTripper) http.RoundTripper) *Clie
 	return c
 }
 
-func (c *Client) Request(ctx context.Context, method HttpMethod, path string) *httprequest.Request {
-	return httprequest.NewRequest(ctx, c.HttpClient, string(method), c.url(path))
+func (c *Client) Request(ctx context.Context, method HttpMethod, path string) *Request {
+	return NewRequest(ctx, c.HttpClient, string(method), c.url(path))
 }
 
-func (c *Client) MultipartRequest(ctx context.Context, method HttpMethod, path string) *httprequest.Multipart {
-	return httprequest.NewMultipart(ctx, c.HttpClient, string(method), c.url(path))
+func (c *Client) MultipartRequest(ctx context.Context, method HttpMethod, path string) *Multipart {
+	return NewMultipart(ctx, c.HttpClient, string(method), c.url(path))
 }
 
-func (c *Client) GET(ctx context.Context, path string) *httprequest.Request {
+func (c *Client) GET(ctx context.Context, path string) *Request {
 	return c.Request(ctx, GET, path)
 }
 
-func (c *Client) POST(ctx context.Context, path string) *httprequest.Request {
+func (c *Client) POST(ctx context.Context, path string) *Request {
 	return c.Request(ctx, POST, path)
 }
 
-func (c *Client) PUT(ctx context.Context, path string) *httprequest.Request {
+func (c *Client) PUT(ctx context.Context, path string) *Request {
 	return c.Request(ctx, PUT, path)
 }
 
-func (c *Client) PATCH(ctx context.Context, path string) *httprequest.Request {
+func (c *Client) PATCH(ctx context.Context, path string) *Request {
 	return c.Request(ctx, PATCH, path)
 }
 
-func (c *Client) DELETE(ctx context.Context, path string) *httprequest.Request {
+func (c *Client) DELETE(ctx context.Context, path string) *Request {
 	return c.Request(ctx, DELETE, path)
 }
 
-func (c *Client) Multipart(ctx context.Context, path string) *httprequest.Multipart {
+func (c *Client) Multipart(ctx context.Context, path string) *Multipart {
 	return c.MultipartRequest(ctx, POST, path)
 }

@@ -1,4 +1,4 @@
-package httptransport_test
+package httpstream_test
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/nativebpm/httpstream"
-	"github.com/nativebpm/httpstream/internal/httptransport"
 )
 
 func TestLoggingMiddleware_EndToEnd(t *testing.T) {
@@ -30,7 +29,7 @@ func TestLoggingMiddleware_EndToEnd(t *testing.T) {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	req := client.GET(context.Background(), "/").Use(httptransport.LoggingMiddleware(logger))
+	req := client.GET(context.Background(), "/").Use(httpstream.LoggingMiddleware(logger))
 	resp, err := req.Send()
 	if err != nil {
 		t.Fatalf("request failed: %v", err)

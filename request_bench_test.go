@@ -1,4 +1,4 @@
-package httprequest_test
+package httpstream_test
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nativebpm/httpstream/internal/httprequest"
+	"github.com/nativebpm/httpstream"
 )
 
 func BenchmarkRequest_Simple(b *testing.B) {
@@ -26,7 +26,7 @@ func BenchmarkRequest_Simple(b *testing.B) {
 	url, _ := url.Parse(server.URL)
 
 	for i := 0; i < b.N; i++ {
-		resp, err := httprequest.NewRequest(ctx, client, http.MethodGet, url.String()).
+		resp, err := httpstream.NewRequest(ctx, client, http.MethodGet, url.String()).
 			Header("X-API-Key", "secret").
 			Param("page", "1").
 			Send()
@@ -52,7 +52,7 @@ func BenchmarkRequest_ManyParams(b *testing.B) {
 	url, _ := url.Parse(server.URL)
 
 	for i := 0; i < b.N; i++ {
-		req := httprequest.NewRequest(ctx, client, http.MethodGet, url.String())
+		req := httpstream.NewRequest(ctx, client, http.MethodGet, url.String())
 		for j := 0; j < 10; j++ {
 			req.Param("param", "value")
 		}
@@ -85,7 +85,7 @@ func BenchmarkRequest_JSON(b *testing.B) {
 	url, _ := url.Parse(server.URL)
 
 	for i := 0; i < b.N; i++ {
-		resp, err := httprequest.NewRequest(ctx, client, http.MethodPost, url.String()).
+		resp, err := httpstream.NewRequest(ctx, client, http.MethodPost, url.String()).
 			JSON(data).
 			Send()
 		if err != nil {
@@ -110,7 +110,7 @@ func BenchmarkRequest_WithTimeout(b *testing.B) {
 	url, _ := url.Parse(server.URL)
 
 	for i := 0; i < b.N; i++ {
-		resp, err := httprequest.NewRequest(ctx, client, http.MethodGet, url.String()).
+		resp, err := httpstream.NewRequest(ctx, client, http.MethodGet, url.String()).
 			Timeout(5 * time.Second).
 			Send()
 		if err != nil {
@@ -141,7 +141,7 @@ func BenchmarkRequest_JSONWithTimeout(b *testing.B) {
 	url, _ := url.Parse(server.URL)
 
 	for i := 0; i < b.N; i++ {
-		resp, err := httprequest.NewRequest(ctx, client, http.MethodPost, url.String()).
+		resp, err := httpstream.NewRequest(ctx, client, http.MethodPost, url.String()).
 			Timeout(10 * time.Second).
 			JSON(data).
 			Send()
@@ -169,7 +169,7 @@ func BenchmarkRequest_ComplexChainWithTimeout(b *testing.B) {
 	url, _ := url.Parse(server.URL)
 
 	for i := 0; i < b.N; i++ {
-		resp, err := httprequest.NewRequest(ctx, client, http.MethodPost, url.String()).
+		resp, err := httpstream.NewRequest(ctx, client, http.MethodPost, url.String()).
 			Header("X-API-Key", "secret").
 			Header("User-Agent", "test-client").
 			Timeout(5*time.Second).
