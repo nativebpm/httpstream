@@ -97,7 +97,7 @@ func TestHTTPClient_NewRequest(t *testing.T) {
 	hc, _ := NewClient(client, "https://example.com")
 
 	ctx := context.Background()
-	req := hc.NewRequest(ctx, GET, "/test")
+	req := hc.Request(ctx, GET, "/test")
 
 	if req.Method != "GET" {
 		t.Errorf("NewRequest() method = %v, want GET", req.Method)
@@ -114,7 +114,7 @@ func TestHTTPClient_NewMultipart(t *testing.T) {
 	hc, _ := NewClient(client, "https://example.com")
 
 	ctx := context.Background()
-	mp := hc.NewMultipart(ctx, POST, "/upload")
+	mp := hc.MultipartRequest(ctx, POST, "/upload")
 
 	if mp == nil {
 		t.Error("NewMultipart() should return a non-nil Multipart")
@@ -143,7 +143,7 @@ func TestHTTPClient_WithMiddleware(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	req := hc.NewRequest(ctx, GET, "/")
+	req := hc.Request(ctx, GET, "/")
 
 	resp, err := req.Send()
 	if err != nil {

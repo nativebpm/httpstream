@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/nativebpm/httpclient/httprequest"
+	"github.com/nativebpm/httpclient/internal/httprequest"
 )
 
 type method string
@@ -18,13 +18,17 @@ const (
 	PATCH   method = http.MethodPatch
 	DELETE  method = http.MethodDelete
 	HEAD    method = http.MethodHead
+	CONNECT method = http.MethodConnect
 	OPTIONS method = http.MethodOptions
+	TRACE   method = http.MethodTrace
 )
 
 type Middleware func(http.RoundTripper) http.RoundTripper
+type Multipart = httprequest.Multipart
+type Request = httprequest.Request
 
 type HTTPClient struct {
-	http.Client
+	client      http.Client
 	baseURL     url.URL
 	middlewares []Middleware
 }
@@ -36,10 +40,14 @@ func NewClient(client http.Client, baseURL string) (*HTTPClient, error) {
 	}
 
 	return &HTTPClient{
-		Client:      client,
+		client:      client,
 		baseURL:     *u,
 		middlewares: []Middleware{},
 	}, nil
+}
+
+func (c *HTTPClient) url(path string) string {
+	return c.baseURL.JoinPath(path).String()
 }
 
 func (c *HTTPClient) Use(middleware Middleware) *HTTPClient {
@@ -47,12 +55,8 @@ func (c *HTTPClient) Use(middleware Middleware) *HTTPClient {
 	return c
 }
 
-func (c *HTTPClient) url(path string) string {
-	return c.baseURL.JoinPath(path).String()
-}
-
-func (c *HTTPClient) NewRequest(ctx context.Context, method method, path string) *httprequest.Request {
-	client := c.Client
+func (c *HTTPClient) Request(ctx context.Context, method method, path string) *httprequest.Request {
+	client := c.client
 	for _, mw := range c.middlewares {
 		if client.Transport == nil {
 			client.Transport = http.DefaultTransport
@@ -62,8 +66,8 @@ func (c *HTTPClient) NewRequest(ctx context.Context, method method, path string)
 	return httprequest.NewRequest(ctx, client, string(method), c.url(path))
 }
 
-func (c *HTTPClient) NewMultipart(ctx context.Context, method method, path string) *httprequest.Multipart {
-	client := c.Client
+func (c *HTTPClient) MultipartRequest(ctx context.Context, method method, path string) *httprequest.Multipart {
+	client := c.client
 	for _, mw := range c.middlewares {
 		if client.Transport == nil {
 			client.Transport = http.DefaultTransport
@@ -71,4 +75,28 @@ func (c *HTTPClient) NewMultipart(ctx context.Context, method method, path strin
 		client.Transport = mw(client.Transport)
 	}
 	return httprequest.NewMultipart(ctx, client, string(method), c.url(path))
+}
+
+func (c *HTTPClient) GET(ctx context.Context, path string) *httprequest.Request {
+	return c.Request(ctx, GET, path)
+}
+
+func (c *HTTPClient) POST(ctx context.Context, path string) *httprequest.Request {
+	return c.Request(ctx, POST, path)
+}
+
+func (c *HTTPClient) PUT(ctx context.Context, path string) *httprequest.Request {
+	return c.Request(ctx, PUT, path)
+}
+
+func (c *HTTPClient) PATCH(ctx context.Context, path string) *httprequest.Request {
+	return c.Request(ctx, PATCH, path)
+}
+
+func (c *HTTPClient) DELETE(ctx context.Context, path string) *httprequest.Request {
+	return c.Request(ctx, DELETE, path)
+}
+
+func (c *HTTPClient) Multipart(ctx context.Context, path string) *httprequest.Multipart {
+	return c.MultipartRequest(ctx, POST, path)
 }
