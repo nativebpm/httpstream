@@ -10,8 +10,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/nativebpm/httpclient"
-	// "github.com/nativebpm/httpclient/examples/multipart_streaming_example/middleware"
+	"github.com/nativebpm/streamhttp"
+	// "github.com/nativebpm/streamhttp/examples/multipart_streaming_example/middleware"
 )
 
 // countingReader wraps an io.Reader and tracks the number of bytes read
@@ -40,25 +40,25 @@ func main() {
 	runtime.ReadMemStats(&m)
 	logger.Info("Before streaming", "Alloc (KB)", m.Alloc/1024, "TotalAlloc (KB)", m.TotalAlloc/1024)
 
-	httpClient := &http.Client{Timeout: 60 * time.Second}
+	client := &http.Client{Timeout: 60 * time.Second}
 
-	server1Client, err := httpclient.NewClient(*httpClient, "http://localhost:8080")
+	server1Client, err := streamhttp.NewClient(*client, "http://localhost:8080",
+		streamhttp.LoggingMiddleware(logger.WithGroup("server1")),
+		// middleware.ProgressMiddleware(logger.WithGroup("server1")),
+	)
 	if err != nil {
 		logger.Error("Failed to server1Client client", "error", err)
 		return
 	}
 
-	server2Client, err := httpclient.NewClient(*httpClient, "http://localhost:8081")
+	server2Client, err := streamhttp.NewClient(*client, "http://localhost:8081",
+		streamhttp.LoggingMiddleware(logger.WithGroup("server2")),
+		// middleware.UploadProgressMiddleware(logger.WithGroup("server2")),
+	)
 	if err != nil {
 		logger.Error("Failed to server2Client client", "error", err)
 		return
 	}
-
-	server1Client.WithLogger(logger.WithGroup("server1"))
-	// server1Client.Use(middleware.ProgressMiddleware(logger.WithGroup("server1")))
-
-	server2Client.WithLogger(logger.WithGroup("server2"))
-	// server2Client.Use(middleware.UploadProgressMiddleware(logger.WithGroup("server2")))
 
 	server1Resp, err := server1Client.GET(context.Background(), "/file").
 		Timeout(30 * time.Second).

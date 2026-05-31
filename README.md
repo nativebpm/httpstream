@@ -1,39 +1,45 @@
-# Stream‑first HTTP client for Go.
+# Stream-first HTTP client for Go
 
-Stream large payloads (without buffering) via `io.Pipe`.
+A minimal, middleware-friendly HTTP client that streams data directly via `io.Pipe`, avoiding full in-memory buffering.
 
 ```bash
-go get github.com/nativebpm/httpclient
+go get github.com/nativebpm/streamhttp
 ```
 
-## Problem
+## Why
 
-Standard HTTP helpers buffer entire payloads in memory before sending. For large JSON, multipart uploads, generated archives, or database dumps this causes:
-- High memory usage: O(n), where n = payload size
-- Delayed transmission (server waits for full upload)
-- OOM on constrained environments
+The standard `net/http` helpers buffer full payloads before sending. This becomes inefficient when working with:
 
-## Solution
+- Large JSON or file uploads
+- Generated archives or database exports
+- Streaming pipelines and data transformations
 
-Stream data as you produce it:
-- `io.Pipe` connects writer → HTTP transport directly
-- Memory footprint: O(1) — constant, independent of payload size
-- Natural backpressure via blocking writes
-- Server can start processing immediately
+## Problems
 
-## Features
+- **High memory usage** - O(n), proportional to payload size
+- **Transmission delay** - server waits for full upload
+- **OOM risk** - on constrained environments
 
-- Thin `net/http` wrapper
-- Middleware: `func(http.RoundTripper) http.RoundTripper`
-- Fluent API (GET, POST, Multipart, etc.)
-- No goroutine leaks, no globals
+## Stream-first solution
+
+- `io.Pipe` connects your writer directly to the HTTP transport
+- **Constant memory** - O(1), independent of payload size
+- **Natural backpressure** - writer blocks until data is consumed by the transport
+- **Immediate server processing** - no full buffering required
+
+## Highlights
+
+- Thin wrapper over `net/http`
+- Composable middleware: `func(http.RoundTripper) http.RoundTripper`
+- Fluent API: `GET`, `POST`, `Multipart`, etc.
+- Safe for concurrent use - no globals, no internal state, no reflection
 
 ## Examples
 
-- [Streaming multipart](examples/multipart_streaming_example)
-- [Without fluent API (for code readability comparison)](examples/multipart_streaming_example/multipart_straming_without_fluent_api)
+- [Streaming multipart upload](examples/multipart_streaming_example)
+- [Without fluent API (for comparison)](examples/multipart_streaming_example/multipart_streaming_without_fluent_api)
 - [Logger middleware](examples/logger_slog_example)
 
 ## License
 
-MIT — see [`LICENSE`](../LICENSE).
+MIT - see [LICENSE](../LICENSE)

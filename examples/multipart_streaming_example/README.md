@@ -1,6 +1,6 @@
 # Multipart Streaming Example
 
-This example demonstrates streaming data between two servers using http-client.
+This example demonstrates streaming data between two servers using streamhttp.
 
 ## Architecture
 
@@ -39,11 +39,11 @@ go run main.go
 
 ### Alternative: Without Fluent API
 
-For comparison, there's an alternative implementation in `multipart_straming_without_fluent_api/main.go` that achieves the same streaming behavior using only standard Go libraries (`net/http`, `mime/multipart`, `io.Pipe`) without the custom http-client library or fluent API.
+For comparison, there's an alternative implementation in `multipart_streaming_without_fluent_api/main.go` that achieves the same streaming behavior using only standard Go libraries (`net/http`, `mime/multipart`, `io.Pipe`).
 
 To run the alternative client:
 ```sh
-cd multipart_straming_without_fluent_api
+cd multipart_streaming_without_fluent_api
 go run main.go
 ```
 

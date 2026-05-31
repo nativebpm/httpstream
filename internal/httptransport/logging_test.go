@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nativebpm/httpclient"
-	"github.com/nativebpm/httpclient/internal/httptransport"
+	"github.com/nativebpm/streamhttp"
+	"github.com/nativebpm/streamhttp/internal/httptransport"
 )
 
 func TestLoggingMiddleware_EndToEnd(t *testing.T) {
@@ -22,15 +22,13 @@ func TestLoggingMiddleware_EndToEnd(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client, err := httpclient.NewClient(http.Client{Timeout: 5 * time.Second}, ts.URL)
-	if err != nil {
-		t.Fatalf("NewClient: %v", err)
-	}
-
 	// create a JSON logger writing to io.Discard so tests don't print to stdout
 	logger := slog.New(slog.NewJSONHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-	client.Use(httptransport.LoggingMiddleware(logger))
+	client, err := streamhttp.NewClient(http.Client{Timeout: 5 * time.Second}, ts.URL, httptransport.LoggingMiddleware(logger))
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
 
 	req := client.GET(context.Background(), "/")
 	resp, err := req.Send()

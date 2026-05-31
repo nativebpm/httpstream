@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nativebpm/httpclient/internal/httprequest"
+	"github.com/nativebpm/streamhttp/internal/httprequest"
 )
 
 func BenchmarkRequest_Simple(b *testing.B) {

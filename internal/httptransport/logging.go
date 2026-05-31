@@ -13,7 +13,7 @@ import (
 // The middleware logs an entry before the request is sent and after the
 // response is received (or when an error occurs). It records method, url,
 // duration, status (when available), headers and the error when present.
-func LoggingMiddleware(logger *slog.Logger) Middleware {
+func LoggingMiddleware(logger *slog.Logger) func(http.RoundTripper) http.RoundTripper {
 	if logger == nil {
 		// Use the default logger if nil was provided to avoid panics.
 		logger = slog.Default()

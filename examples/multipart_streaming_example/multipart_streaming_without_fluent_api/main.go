@@ -11,8 +11,8 @@ import (
 	"runtime"
 	"time"
 
-	// "github.com/nativebpm/httpclient/examples/multipart_streaming_example/middleware"
-	"github.com/nativebpm/httpclient/internal/httptransport"
+	// "github.com/nativebpm/streamhttp/examples/multipart_streaming_example/middleware"
+	"github.com/nativebpm/streamhttp/internal/httptransport"
 )
 
 // countingReader wraps an io.Reader and tracks the number of bytes read
@@ -41,10 +41,10 @@ func main() {
 	runtime.ReadMemStats(&m)
 	logger.Info("Before streaming", "Alloc (KB)", m.Alloc/1024, "TotalAlloc (KB)", m.TotalAlloc/1024)
 
-	httpClient := &http.Client{Timeout: 60 * time.Second}
+	streamhttp := &http.Client{Timeout: 60 * time.Second}
 
-	server1Client := *httpClient
-	server2Client := *httpClient
+	server1Client := *streamhttp
+	server2Client := *streamhttp
 
 	// Attach logging + progress middleware to server1 (for download progress).
 	transport1 := http.DefaultTransport
