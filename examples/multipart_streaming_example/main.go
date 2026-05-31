@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/nativebpm/httpclient"
-	// "github.com/nativebpm/http-client/examples/multipart_streaming_example/middleware"
+	// "github.com/nativebpm/httpclient/examples/multipart_streaming_example/middleware"
 )
 
 // countingReader wraps an io.Reader and tracks the number of bytes read
@@ -54,7 +54,10 @@ func main() {
 		return
 	}
 
+	server1Client.WithLogger(logger.WithGroup("server1"))
 	// server1Client.Use(middleware.ProgressMiddleware(logger.WithGroup("server1")))
+
+	server2Client.WithLogger(logger.WithGroup("server2"))
 	// server2Client.Use(middleware.UploadProgressMiddleware(logger.WithGroup("server2")))
 
 	server1Resp, err := server1Client.GET(context.Background(), "/file").

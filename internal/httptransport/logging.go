@@ -1,4 +1,4 @@
-package middleware
+package httptransport
 
 import (
 	"log/slog"
@@ -6,8 +6,19 @@ import (
 	"time"
 )
 
-// LoggingMiddleware returns a middleware that logs HTTP requests and responses using slog.
-func LoggingMiddleware(logger *slog.Logger) func(http.RoundTripper) http.RoundTripper {
+// LoggingMiddleware returns a Middleware that logs HTTP requests and responses
+// using the provided *slog.Logger. It is compatible with the Middleware type
+// expected by the package: func(http.RoundTripper) http.RoundTripper.
+//
+// The middleware logs an entry before the request is sent and after the
+// response is received (or when an error occurs). It records method, url,
+// duration, status (when available), headers and the error when present.
+func LoggingMiddleware(logger *slog.Logger) Middleware {
+	if logger == nil {
+		// Use the default logger if nil was provided to avoid panics.
+		logger = slog.Default()
+	}
+
 	return func(next http.RoundTripper) http.RoundTripper {
 		return &loggingRoundTripper{
 			next:   next,
@@ -24,14 +35,14 @@ type loggingRoundTripper struct {
 func (l *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	start := time.Now()
 
-	// Log the request
+	// Log request start
 	l.logger.Info("HTTP Request",
 		"method", req.Method,
 		"url", req.URL.String(),
 		"headers", req.Header,
 	)
 
-	// Perform the request
+	// Delegate to the next RoundTripper
 	resp, err := l.next.RoundTrip(req)
 	duration := time.Since(start)
 
@@ -45,7 +56,7 @@ func (l *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 		return resp, err
 	}
 
-	// Log the response
+	// Log response details
 	l.logger.Info("HTTP Response",
 		"method", req.Method,
 		"url", req.URL.String(),

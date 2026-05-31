@@ -3,10 +3,12 @@ package httpclient
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 
 	"github.com/nativebpm/httpclient/internal/httprequest"
+	"github.com/nativebpm/httpclient/internal/httptransport"
 )
 
 type method string
@@ -23,7 +25,7 @@ const (
 	TRACE   method = http.MethodTrace
 )
 
-type Middleware func(http.RoundTripper) http.RoundTripper
+type Middleware = httptransport.Middleware
 type Multipart = httprequest.Multipart
 type Request = httprequest.Request
 
@@ -99,4 +101,8 @@ func (c *HTTPClient) DELETE(ctx context.Context, path string) *httprequest.Reque
 
 func (c *HTTPClient) Multipart(ctx context.Context, path string) *httprequest.Multipart {
 	return c.MultipartRequest(ctx, POST, path)
+}
+
+func (c *HTTPClient) WithLogger(logger *slog.Logger) *HTTPClient {
+	return c.Use(httptransport.LoggingMiddleware(logger))
 }
