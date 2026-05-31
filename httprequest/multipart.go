@@ -2,7 +2,6 @@ package httprequest
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -36,14 +35,6 @@ func NewMultipart(ctx context.Context, client http.Client, method, url string) *
 	}
 }
 
-func (r *Multipart) Use(middleware func(http.RoundTripper) http.RoundTripper) *Multipart {
-	if r.client.Transport == nil {
-		r.client.Transport = http.DefaultTransport
-	}
-	r.client.Transport = middleware(r.client.Transport)
-	return r
-}
-
 // Timeout sets a timeout for the request.
 func (r *Multipart) Timeout(duration time.Duration) *Multipart {
 	ctx, cancel := context.WithTimeout(r.request.Context(), duration)
@@ -55,23 +46,6 @@ func (r *Multipart) Timeout(duration time.Duration) *Multipart {
 // Send executes the HTTP request and returns the response.
 func (r *Multipart) Send() (*http.Response, error) {
 	ctx := r.request.Context()
-
-	// Pre-validate files to ensure they are not empty
-	for i, field := range r.fields {
-		if field.contentType == applicationOctetStream {
-			// Read first byte to check if file has content
-			buf := make([]byte, 1)
-			n, err := field.file.Read(buf)
-			if err != nil && err != io.EOF {
-				return nil, fmt.Errorf("failed to read file %s: %w", field.value, err)
-			}
-			if n == 0 {
-				return nil, fmt.Errorf("empty file: %s", field.value)
-			}
-			// Wrap reader to return the read byte back to the stream
-			r.fields[i].file = io.MultiReader(strings.NewReader(string(buf[:n])), field.file)
-		}
-	}
 
 	pr, pw := io.Pipe()
 	mw := multipart.NewWriter(pw)
@@ -90,21 +64,18 @@ func (r *Multipart) Send() (*http.Response, error) {
 				return
 			default:
 			}
-
 			switch field.contentType {
 			case multipartFormData:
 				if err := mw.WriteField(field.key, field.value); err != nil {
 					pw.CloseWithError(err)
 					return
 				}
-
 			case applicationOctetStream:
 				part, err := mw.CreateFormFile(field.key, field.value)
 				if err != nil {
 					pw.CloseWithError(err)
 					return
 				}
-
 				if _, err := io.Copy(part, field.file); err != nil {
 					pw.CloseWithError(err)
 					return

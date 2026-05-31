@@ -1,4 +1,4 @@
-package httpstream
+package httpclient
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func TestNewClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := &http.Client{}
+			client := http.Client{}
 			_, err := NewClient(client, tt.baseURL)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewClient() error = %v, wantErr %v", err, tt.wantErr)
@@ -41,8 +41,23 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
-func TestClient_url(t *testing.T) {
-	client := &http.Client{}
+func TestHTTPClient_Use(t *testing.T) {
+	client := http.Client{}
+	hc, _ := NewClient(client, "https://example.com")
+
+	// Mock middleware
+	middleware := func(rt http.RoundTripper) http.RoundTripper {
+		return rt
+	}
+
+	result := hc.Use(middleware)
+	if len(result.middlewares) != 1 {
+		t.Errorf("Use() should add one middleware, got %d", len(result.middlewares))
+	}
+}
+
+func TestHTTPClient_url(t *testing.T) {
+	client := http.Client{}
 	hc, _ := NewClient(client, "https://example.com/api")
 
 	tests := []struct {
@@ -77,12 +92,12 @@ func TestClient_url(t *testing.T) {
 	}
 }
 
-func TestClient_NewRequest(t *testing.T) {
-	client := &http.Client{}
+func TestHTTPClient_NewRequest(t *testing.T) {
+	client := http.Client{}
 	hc, _ := NewClient(client, "https://example.com")
 
 	ctx := context.Background()
-	req := hc.Request(ctx, GET, "/test")
+	req := hc.NewRequest(ctx, GET, "/test")
 
 	if req.Method != "GET" {
 		t.Errorf("NewRequest() method = %v, want GET", req.Method)
@@ -94,12 +109,12 @@ func TestClient_NewRequest(t *testing.T) {
 	}
 }
 
-func TestClient_NewMultipart(t *testing.T) {
-	client := &http.Client{}
+func TestHTTPClient_NewMultipart(t *testing.T) {
+	client := http.Client{}
 	hc, _ := NewClient(client, "https://example.com")
 
 	ctx := context.Background()
-	mp := hc.MultipartRequest(ctx, POST, "/upload")
+	mp := hc.NewMultipart(ctx, POST, "/upload")
 
 	if mp == nil {
 		t.Error("NewMultipart() should return a non-nil Multipart")
@@ -109,7 +124,7 @@ func TestClient_NewMultipart(t *testing.T) {
 	// But we can check that it's initialized
 }
 
-func TestClient_WithMiddleware(t *testing.T) {
+func TestHTTPClient_WithMiddleware(t *testing.T) {
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Test") != "middleware" {
@@ -119,14 +134,16 @@ func TestClient_WithMiddleware(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := &http.Client{}
+	client := http.Client{}
 	hc, _ := NewClient(client, server.URL)
+
+	// Add middleware that sets a header
 	hc.Use(func(rt http.RoundTripper) http.RoundTripper {
 		return &testTransport{rt: rt}
 	})
 
 	ctx := context.Background()
-	req := hc.Request(ctx, GET, "/")
+	req := hc.NewRequest(ctx, GET, "/")
 
 	resp, err := req.Send()
 	if err != nil {
