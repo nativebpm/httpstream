@@ -89,9 +89,10 @@ func (r *Multipart) Send() (*http.Response, error) {
 			}
 
 			var err error
-			if f.contentType == multipartFormData {
+			switch f.contentType {
+			case multipartFormData:
 				err = mw.WriteField(f.key, f.value)
-			} else if f.contentType == applicationOctetStream {
+			case applicationOctetStream:
 				var part io.Writer
 				if part, err = mw.CreateFormFile(f.key, f.value); err == nil {
 					_, err = io.Copy(part, f.file)
@@ -130,18 +131,24 @@ func (r *Multipart) PathParam(key, val string) *Multipart {
 	r.request.URL.Path = strings.ReplaceAll(r.request.URL.Path, "{"+key+"}", val)
 	return r
 }
-func (r *Multipart) PathInt(k string, v int) *Multipart     { return r.PathParam(k, strconv.Itoa(v)) }
-func (r *Multipart) PathBool(k string, v bool) *Multipart   { return r.PathParam(k, strconv.FormatBool(v)) }
-func (r *Multipart) PathFloat(k string, v float64) *Multipart { return r.PathParam(k, strconv.FormatFloat(v, 'f', -1, 64)) }
+func (r *Multipart) PathInt(k string, v int) *Multipart { return r.PathParam(k, strconv.Itoa(v)) }
+func (r *Multipart) PathBool(k string, v bool) *Multipart {
+	return r.PathParam(k, strconv.FormatBool(v))
+}
+func (r *Multipart) PathFloat(k string, v float64) *Multipart {
+	return r.PathParam(k, strconv.FormatFloat(v, 'f', -1, 64))
+}
 
 // Param adds a string field to the multipart form.
 func (r *Multipart) Param(k, v string) *Multipart {
 	r.fields = append(r.fields, multipartField{contentType: multipartFormData, key: k, value: v})
 	return r
 }
-func (r *Multipart) Int(k string, v int) *Multipart     { return r.Param(k, strconv.Itoa(v)) }
-func (r *Multipart) Bool(k string, v bool) *Multipart   { return r.Param(k, strconv.FormatBool(v)) }
-func (r *Multipart) Float(k string, v float64) *Multipart { return r.Param(k, strconv.FormatFloat(v, 'f', -1, 64)) }
+func (r *Multipart) Int(k string, v int) *Multipart   { return r.Param(k, strconv.Itoa(v)) }
+func (r *Multipart) Bool(k string, v bool) *Multipart { return r.Param(k, strconv.FormatBool(v)) }
+func (r *Multipart) Float(k string, v float64) *Multipart {
+	return r.Param(k, strconv.FormatFloat(v, 'f', -1, 64))
+}
 
 // File adds a file field to the multipart form.
 func (r *Multipart) File(key, filename string, content io.Reader) *Multipart {

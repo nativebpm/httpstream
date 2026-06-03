@@ -25,8 +25,11 @@ type concurrencyLimiter struct {
 }
 
 func (c *concurrencyLimiter) RoundTrip(req *http.Request) (*http.Response, error) {
-	// Acquire slot
-	c.sem <- struct{}{}
+	select {
+	case c.sem <- struct{}{}:
+	case <-req.Context().Done():
+		return nil, req.Context().Err()
+	}
 	defer func() { <-c.sem }()
 	return c.next.RoundTrip(req)
 }
