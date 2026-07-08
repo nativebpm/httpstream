@@ -21,18 +21,15 @@ func (r *Request) Stream() (io.ReadCloser, error) {
 }
 
 // StreamLines executes the HTTP request and invokes the callback sequentially for each line.
+// This is suitable for processing custom line-delimited HTTP streams.
 func (r *Request) StreamLines(callback func(line string) error) error {
-	resp, err := r.Send()
+	resp, err := r.Stream()
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("httpstream status non-OK: %d", resp.StatusCode)
-	}
-
-	reader := bufio.NewReader(resp.Body)
+	reader := bufio.NewReader(resp)
 	for {
 		select {
 		case <-r.Context().Done():
@@ -58,4 +55,11 @@ func (r *Request) StreamLines(callback func(line string) error) error {
 		}
 	}
 	return nil
+}
+
+// StreamSSE sets the "Accept: text/event-stream" header and processes the Server-Sent Events (SSE) stream.
+// It executes the request and calls the callback for each streamed event line sequentially.
+func (r *Request) StreamSSE(callback func(line string) error) error {
+	r.Header("Accept", "text/event-stream")
+	return r.StreamLines(callback)
 }

@@ -215,3 +215,37 @@ func TestRequest_StreamLines(t *testing.T) {
 		t.Errorf("Unexpected lines: %v", lines)
 	}
 }
+
+func TestRequest_StreamSSE(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Accept") != "text/event-stream" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("data: event1\n\ndata: event2\n\n"))
+	}))
+	defer server.Close()
+
+	hc, _ := NewClient(nil, server.URL)
+	ctx := context.Background()
+	req := hc.GET(ctx, "/")
+
+	var events []string
+	err := req.StreamSSE(func(line string) error {
+		if line != "" && line != "\n" {
+			events = append(events, strings.TrimSuffix(line, "\n"))
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("StreamSSE() failed: %v", err)
+	}
+
+	if len(events) != 2 {
+		t.Fatalf("Expected 2 events, got %d", len(events))
+	}
+	if events[0] != "data: event1" || events[1] != "data: event2" {
+		t.Errorf("Unexpected events: %v", events)
+	}
+}
