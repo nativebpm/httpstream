@@ -1,8 +1,11 @@
 package httpstream
 
 import (
+	"bufio"
+	"compress/gzip"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -24,6 +27,7 @@ type Request struct {
 	client     http.Client
 	body       requestPayload
 	cancelFunc context.CancelFunc
+	gzip       bool // Gzip compression flag
 }
 
 // NewRequest creates a new HTTP request builder.
@@ -33,6 +37,12 @@ func NewRequest(ctx context.Context, client http.Client, method string, url stri
 		Request: request,
 		client:  client,
 	}
+}
+
+// Gzip enables gzip compression for the request body stream on the fly.
+func (r *Request) Gzip() *Request {
+	r.gzip = true
+	return r
 }
 
 func (r *Request) Use(middleware func(http.RoundTripper) http.RoundTripper) *Request {
@@ -84,8 +94,26 @@ func (r *Request) Send() (*http.Response, error) {
 		}
 	}
 
+	// Apply dynamic gzip stream pipe if enabled
+	if r.gzip && r.Request.Body != nil {
+		r.Request.Header.Set("Content-Encoding", "gzip")
+		originalBody := r.Request.Body
+		pr, pw := io.Pipe()
+		r.Request.Body = pr
+
+		go func() {
+			defer pw.Close()
+			gw := gzip.NewWriter(pw)
+			defer gw.Close()
+
+			_, _ = io.Copy(gw, originalBody)
+			_ = originalBody.Close()
+		}()
+	}
+
 	return r.sendRequest()
 }
+
 
 func (r *Request) sendRequest() (*http.Response, error) {
 	resp, err := r.client.Do(r.Request)
@@ -159,4 +187,57 @@ func (r *Request) Form(key, value string) *Request {
 func (r *Request) Cookie(name, value string) *Request {
 	r.AddCookie(&http.Cookie{Name: name, Value: value})
 	return r
+}
+
+// Stream executes the HTTP request and returns a raw readable response stream (io.ReadCloser).
+func (r *Request) Stream() (io.ReadCloser, error) {
+	resp, err := r.Send()
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, fmt.Errorf("httpstream status non-OK: %d", resp.StatusCode)
+	}
+	return resp.Body, nil
+}
+
+// StreamLines executes the HTTP request and invokes the callback sequentially for each line.
+func (r *Request) StreamLines(callback func(line string) error) error {
+	resp, err := r.Send()
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("httpstream status non-OK: %d", resp.StatusCode)
+	}
+
+	reader := bufio.NewReader(resp.Body)
+	for {
+		select {
+		case <-r.Context().Done():
+			return r.Context().Err()
+		default:
+		}
+
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				if line != "" {
+					if cbErr := callback(line); cbErr != nil {
+						return cbErr
+					}
+				}
+				break
+			}
+			return err
+		}
+
+		if cbErr := callback(line); cbErr != nil {
+			return cbErr
+		}
+	}
+	return nil
 }

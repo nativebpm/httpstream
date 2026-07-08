@@ -2,8 +2,10 @@ package httpstream
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -157,4 +159,59 @@ type testTransport struct {
 func (t *testTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Set("X-Test", "middleware")
 	return t.rt.RoundTrip(req)
+}
+
+func TestRequest_Stream(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("stream-data"))
+	}))
+	defer server.Close()
+
+	hc, _ := NewClient(nil, server.URL)
+	ctx := context.Background()
+	req := hc.GET(ctx, "/")
+
+	stream, err := req.Stream()
+	if err != nil {
+		t.Fatalf("Stream() failed: %v", err)
+	}
+	defer stream.Close()
+
+	data, err := io.ReadAll(stream)
+	if err != nil {
+		t.Fatalf("ReadAll() failed: %v", err)
+	}
+
+	if string(data) != "stream-data" {
+		t.Errorf("Expected 'stream-data', got %q", string(data))
+	}
+}
+
+func TestRequest_StreamLines(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("line1\nline2\n"))
+	}))
+	defer server.Close()
+
+	hc, _ := NewClient(nil, server.URL)
+	ctx := context.Background()
+	req := hc.GET(ctx, "/")
+
+	var lines []string
+	err := req.StreamLines(func(line string) error {
+		lines = append(lines, strings.TrimSuffix(line, "\n"))
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("StreamLines() failed: %v", err)
+	}
+
+	if len(lines) != 2 {
+		t.Fatalf("Expected 2 lines, got %d", len(lines))
+	}
+	if lines[0] != "line1" || lines[1] != "line2" {
+		t.Errorf("Unexpected lines: %v", lines)
+	}
 }
