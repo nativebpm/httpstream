@@ -2,11 +2,13 @@ package httpstream
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNewClient(t *testing.T) {
@@ -259,5 +261,37 @@ func TestRequest_StreamSSE(t *testing.T) {
 	e2 := events[1]
 	if e2.ID != "102" || e2.Event != "" || e2.Data != "single-line" {
 		t.Errorf("Unexpected event 2: %+v", e2)
+	}
+}
+
+func TestRequest_IdleTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("line1\n"))
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+		// Wait 300ms before sending the next line to trigger the 100ms idle timeout
+		time.Sleep(300 * time.Millisecond)
+		_, _ = w.Write([]byte("line2\n"))
+	}))
+	defer server.Close()
+
+	hc, _ := NewClient(nil, server.URL)
+	ctx := context.Background()
+	req := hc.GET(ctx, "/").IdleTimeout(100 * time.Millisecond)
+
+	var lines []string
+	err := req.StreamLines(func(line string) error {
+		lines = append(lines, strings.TrimSuffix(line, "\n"))
+		return nil
+	})
+
+	if !errors.Is(err, ErrStreamTimeout) {
+		t.Errorf("Expected ErrStreamTimeout error, got: %v", err)
+	}
+
+	if len(lines) != 1 || lines[0] != "line1" {
+		t.Errorf("Expected only 'line1' to be read before timeout, read: %v", lines)
 	}
 }

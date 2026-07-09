@@ -2,10 +2,12 @@ package httpstream
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // Event represents a parsed Server-Sent Event (SSE).
@@ -14,6 +16,9 @@ type Event struct {
 	Event string
 	Data  string
 }
+
+// ErrStreamTimeout is returned when no data is received within the IdleTimeout limit.
+var ErrStreamTimeout = errors.New("httpstream: idle timeout exceeded")
 
 // Stream executes the HTTP request and returns a raw readable response stream (io.ReadCloser).
 func (r *Request) Stream() (io.ReadCloser, error) {
@@ -37,6 +42,16 @@ func (r *Request) StreamLines(callback func(line string) error) error {
 	}
 	defer resp.Close()
 
+	var timeoutErr error
+	var timer *time.Timer
+	if r.idleTimeout > 0 {
+		timer = time.AfterFunc(r.idleTimeout, func() {
+			timeoutErr = ErrStreamTimeout
+			resp.Close() // Closes the network connection to break blocking read
+		})
+		defer timer.Stop()
+	}
+
 	reader := bufio.NewReader(resp)
 	for {
 		select {
@@ -47,6 +62,12 @@ func (r *Request) StreamLines(callback func(line string) error) error {
 
 		line, err := reader.ReadString('\n')
 		if err != nil {
+			if timer != nil {
+				timer.Stop()
+			}
+			if timeoutErr != nil {
+				return timeoutErr
+			}
 			if err == io.EOF {
 				if line != "" {
 					if cbErr := callback(line); cbErr != nil {
@@ -56,6 +77,11 @@ func (r *Request) StreamLines(callback func(line string) error) error {
 				break
 			}
 			return err
+		}
+
+		// Reset idle timeout timer on successful read
+		if timer != nil {
+			timer.Reset(r.idleTimeout)
 		}
 
 		if cbErr := callback(line); cbErr != nil {
@@ -76,6 +102,16 @@ func (r *Request) StreamSSE(callback func(event Event) error) error {
 	}
 	defer resp.Close()
 
+	var timeoutErr error
+	var timer *time.Timer
+	if r.idleTimeout > 0 {
+		timer = time.AfterFunc(r.idleTimeout, func() {
+			timeoutErr = ErrStreamTimeout
+			resp.Close() // Closes the network connection to break blocking read
+		})
+		defer timer.Stop()
+	}
+
 	reader := bufio.NewReader(resp)
 	var currentEvent Event
 	var dataBuilder strings.Builder
@@ -90,7 +126,18 @@ func (r *Request) StreamSSE(callback func(event Event) error) error {
 
 		line, err := reader.ReadString('\n')
 		if err != nil && err != io.EOF {
+			if timer != nil {
+				timer.Stop()
+			}
+			if timeoutErr != nil {
+				return timeoutErr
+			}
 			return err
+		}
+
+		// Reset idle timeout timer on successful read
+		if timer != nil {
+			timer.Reset(r.idleTimeout)
 		}
 
 		// Normalize line ending by stripping \r and \n

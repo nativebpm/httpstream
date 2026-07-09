@@ -22,10 +22,11 @@ type requestPayload struct {
 // Request provides a builder for standard HTTP requests.
 type Request struct {
 	*http.Request
-	client     http.Client
-	body       requestPayload
-	cancelFunc context.CancelFunc
-	gzip       bool // Gzip compression flag
+	client      http.Client
+	body        requestPayload
+	cancelFunc  context.CancelFunc
+	gzip        bool // Gzip compression flag
+	idleTimeout time.Duration
 }
 
 // NewRequest creates a new HTTP request builder.
@@ -56,6 +57,12 @@ func (r *Request) Timeout(duration time.Duration) *Request {
 	ctx, cancel := context.WithTimeout(r.Context(), duration)
 	r.cancelFunc = cancel
 	r.Request = r.WithContext(ctx)
+	return r
+}
+
+// IdleTimeout sets the maximum duration to wait for data between reads.
+func (r *Request) IdleTimeout(duration time.Duration) *Request {
+	r.idleTimeout = duration
 	return r
 }
 
