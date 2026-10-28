@@ -57,8 +57,8 @@ func main() {
 		return
 	}
 
-	server1Client.Use(httpstream.LoggingMiddleware(logger.WithGroup("server2")))
-	// server1Client.Use(middleware.UploadProgressMiddleware(logger.WithGroup("server2")))
+	server2Client.Use(httpstream.LoggingMiddleware(logger.WithGroup("server2")))
+	// server2Client.Use(middleware.UploadProgressMiddleware(logger.WithGroup("server2")))
 
 	server1Resp, err := server1Client.GET(context.Background(), "/file").
 		Timeout(30 * time.Second).

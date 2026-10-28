@@ -970,3 +970,63 @@ func TestMultipart_ComplexPathChaining(t *testing.T) {
 		t.Errorf("expected status 200, got %d", resp.StatusCode)
 	}
 }
+
+func TestMultipart_EmptyFile(t *testing.T) {
+	receivedPartCount := 0
+	receivedFileName := ""
+	var receivedContent []byte
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mr, err := r.MultipartReader()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		for {
+			part, err := mr.NextPart()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			receivedPartCount++
+			receivedFileName = part.FileName()
+			content, err := io.ReadAll(part)
+			part.Close()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			receivedContent = content
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	client := http.Client{}
+	ctx := context.Background()
+
+	resp, err := httpstream.NewMultipart(ctx, client, http.MethodPost, server.URL).
+		File("file", "empty.txt", strings.NewReader("")).
+		Send()
+
+	if err != nil {
+		t.Fatalf("unexpected error when sending empty file: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected status 200, got %d", resp.StatusCode)
+	}
+	if receivedPartCount != 1 {
+		t.Errorf("expected 1 part, got %d", receivedPartCount)
+	}
+	if receivedFileName != "empty.txt" {
+		t.Errorf("expected filename empty.txt, got %s", receivedFileName)
+	}
+	if len(receivedContent) != 0 {
+		t.Errorf("expected 0 bytes received, got %d", len(receivedContent))
+	}
+}

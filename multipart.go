@@ -2,7 +2,6 @@ package httpstream
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -55,21 +54,6 @@ func (r *Multipart) Timeout(duration time.Duration) *Multipart {
 // Send executes the HTTP request and returns the response.
 func (r *Multipart) Send() (*http.Response, error) {
 	ctx := r.request.Context()
-
-	// Pre-validate files to ensure they are not empty
-	for i, f := range r.fields {
-		if f.contentType == applicationOctetStream {
-			buf := make([]byte, 1)
-			n, err := f.file.Read(buf)
-			if err != nil && err != io.EOF {
-				return nil, fmt.Errorf("failed to read file %s: %w", f.value, err)
-			}
-			if n == 0 {
-				return nil, fmt.Errorf("empty file: %s", f.value)
-			}
-			r.fields[i].file = io.MultiReader(strings.NewReader(string(buf[:n])), f.file)
-		}
-	}
 
 	pr, pw := io.Pipe()
 	mw := multipart.NewWriter(pw)

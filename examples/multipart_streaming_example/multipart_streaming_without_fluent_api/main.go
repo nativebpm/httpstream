@@ -88,9 +88,27 @@ func main() {
 	pr, pw := io.Pipe()
 	mw := multipart.NewWriter(pw)
 
+	stopWatch := make(chan struct{})
+	go func() {
+		select {
+		case <-ctx.Done():
+			pw.CloseWithError(ctx.Err())
+			_ = server1Resp.Body.Close()
+		case <-stopWatch:
+		}
+	}()
+	defer close(stopWatch)
+
 	go func() {
 		defer pw.Close()
 		defer mw.Close()
+
+		select {
+		case <-ctx.Done():
+			pw.CloseWithError(ctx.Err())
+			return
+		default:
+		}
 
 		filename := filename(server1Resp.Header, "default_filename")
 		part, err := mw.CreateFormFile("file", filename)
@@ -98,9 +116,29 @@ func main() {
 			pw.CloseWithError(err)
 			return
 		}
-		_, err = io.Copy(part, counter)
-		if err != nil {
-			pw.CloseWithError(err)
+
+		buf := make([]byte, 32*1024)
+		for {
+			select {
+			case <-ctx.Done():
+				pw.CloseWithError(ctx.Err())
+				return
+			default:
+			}
+
+			n, err := counter.Read(buf)
+			if n > 0 {
+				if _, wErr := part.Write(buf[:n]); wErr != nil {
+					pw.CloseWithError(wErr)
+					return
+				}
+			}
+			if err != nil {
+				if err != io.EOF {
+					pw.CloseWithError(err)
+				}
+				return
+			}
 		}
 	}()
 

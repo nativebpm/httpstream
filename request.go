@@ -1,6 +1,7 @@
 package httpstream
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
@@ -68,30 +69,15 @@ func (r *Request) IdleTimeout(duration time.Duration) *Request {
 
 // Send executes the HTTP request and returns the response.
 func (r *Request) Send() (*http.Response, error) {
-	ctx := r.Context()
-
 	switch r.body.contentType {
 	case applicationJSON:
 		if r.body.content != nil {
-			pr, pw := io.Pipe()
-			r.Request.Body = pr
-
-			go func() {
-				defer pw.Close()
-
-				select {
-				case <-ctx.Done():
-					pw.CloseWithError(ctx.Err())
-					return
-				default:
-				}
-
-				encoder := json.NewEncoder(pw)
-				if err := encoder.Encode(r.body.content); err != nil {
-					pw.CloseWithError(err)
-					return
-				}
-			}()
+			data, err := json.Marshal(r.body.content)
+			if err != nil {
+				return nil, err
+			}
+			r.Request.Body = io.NopCloser(bytes.NewReader(data))
+			r.Request.ContentLength = int64(len(data))
 		}
 	case applicationUrlEncodedForm:
 		if r.body.form != nil {
